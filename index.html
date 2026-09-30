@@ -6,7 +6,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<title>露比設計-小幫手</title>
+<title>GROWTHX-AI智能特助</title>
 <style>
   :root {
      
@@ -70,11 +70,11 @@
   .login-box button {
     width: 100%; padding: 14px; background-color: var(--primary-color);
     color: white; border: none; border-radius: 6px; font-size: 16px; font-weight: bold;
-    cursor: pointer; transition: background 0.3s;
+    cursor: pointer; transition: all 0.3s;
   }
  
-  .login-box button:hover { background-color: #45a049; }
-  .login-box button:disabled { background-color: #ccc; cursor: not-allowed; }
+  .login-box button:hover { opacity: 0.85; }
+  .login-box button:disabled { background-color: #ccc; cursor: not-allowed; opacity: 0.6; }
  
   #login-msg { margin-top: 10px; color: #d32f2f; font-size: 14px; min-height: 20px;}
 
@@ -423,7 +423,7 @@
    
     <div id="warroom-chat-messages" class="chat-messages">
        <div style="padding: 20px; text-align: center; color: #888; margin-top: 50px;">
-         歡迎來到企業戰情室。<br><br>系統大腦已準備就緒，您可以隨時請我分析「客戶管理」、「收支記帳」或提供高商業價值的決策建議。
+         歡迎來到企業戰情室。<br><br>系統大腦已準備就緒，您可以隨時請我分析「客服內容」或提供高商業價值的決策建議。
        </div>
     </div>
 
@@ -446,7 +446,7 @@
       </button>
 
 
-      <textarea id="warroom-chat-input" class="chat-input" placeholder="輸入您的指令或提問，進行深層戰略分析... (Shift+Enter 換行)" onkeydown="handleWarRoomKeyPress(event)"></textarea>
+      <textarea id="warroom-chat-input" class="chat-input" placeholder="輸入您的指令或提問... (Shift+Enter 換行)" onkeydown="handleWarRoomKeyPress(event)"></textarea>
      
       <button id="warroom-send-btn" class="send-btn" onclick="sendWarRoomMessage()">
         <svg viewBox="0 0 24 24"><path d="M2.01 21L23 12 2.01 3 2 10l15 2-15 2z"/></svg>
@@ -461,7 +461,7 @@
 
 <script>
   
-  const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbxEwypg0437DP1T3jJrDAcGK4Zz2xAk6lCflHzZ51lfLjkd9QbdfTEs_2--5fb-9dH7/exec";
+  const GAS_WEB_URL = "https://script.google.com/macros/s/AKfycbySnz7p7mZ7sdL25cDVXDURYS7-X1VfWptWWcU343arJ8aPuLtbqLY-pPLV1YsDiip6Zw/exec";
   const GAS_URL = GAS_WEB_URL;
 
 
@@ -575,18 +575,18 @@
 
 
     if (savedEmail && savedName && savedRole) {
-        currentUserEmail = savedEmail;
-        currentUserName = savedName;
-        currentUserRole = savedRole;
-        document.getElementById('login-overlay').style.display = 'none';
+          currentUserEmail = savedEmail;
+          currentUserName = savedName;
+          currentUserRole = savedRole;
+          document.getElementById('login-overlay').style.display = 'none';
 
-
-        if(currentUserRole === 'boss') {
-          document.getElementById('tab-navbar').style.display = 'flex';
-          switchTab('admin');
-          fetchDataBundle(false);
-          pollingInterval = setInterval(() => { fetchDataBundle(true); }, 5000);
-        } else {
+          if(currentUserRole === 'boss') {
+            document.getElementById('tab-navbar').style.display = 'flex';
+            switchTab('admin');
+            fetchDataBundle(false);
+            loadWarRoomHistory();
+            pollingInterval = setInterval(() => { fetchDataBundle(true); }, 5000);
+          } else {
           document.getElementById('tab-navbar').style.display = 'none';
           document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active-tab'));
           document.getElementById('view-client').classList.add('active-tab');
@@ -689,20 +689,19 @@
         currentUserRole = res.role;
 
 
-        localStorage.setItem('growthx_user_email', currentUserEmail);
-        localStorage.setItem('growthx_user_name', currentUserName);
-        localStorage.setItem('growthx_user_role', currentUserRole);
+      localStorage.setItem('growthx_user_email', currentUserEmail);
+      localStorage.setItem('growthx_user_name', currentUserName);
+      localStorage.setItem('growthx_user_role', currentUserRole);
 
+      document.getElementById('login-overlay').style.display = 'none';
 
-        document.getElementById('login-overlay').style.display = 'none';
-
-
-        if(currentUserRole === 'boss') {
-          document.getElementById('tab-navbar').style.display = 'flex';
-          switchTab('admin');
-          fetchDataBundle(false);
-          pollingInterval = setInterval(() => { fetchDataBundle(true); }, 5000);
-        } else {
+      if(currentUserRole === 'boss') {
+        document.getElementById('tab-navbar').style.display = 'flex';
+        switchTab('admin');
+        fetchDataBundle(false);
+        loadWarRoomHistory();
+        pollingInterval = setInterval(() => { fetchDataBundle(true); }, 5000);
+      } else {
           document.getElementById('tab-navbar').style.display = 'none';
           document.querySelectorAll('.tab-content').forEach(el => el.classList.remove('active-tab'));
           document.getElementById('view-client').classList.add('active-tab');
@@ -769,12 +768,56 @@
             msgContainer.appendChild(wrapper);
         });
         clientScrollToBottom();
-    })
-    .catch(err => console.error(err));
-  }
+  })
+  .catch(err => console.error(err));
+}
 
+function loadWarRoomHistory() {
+  requestBackend({ action: 'get_warroom_history' })
+  .then(history => {
+    const msgContainer = document.getElementById('warroom-chat-messages');
+    msgContainer.innerHTML = '';
+    lastWarRoomDate = "";
+    if(history.length === 0) {
+        msgContainer.innerHTML = '<div style="padding: 20px; text-align: center; color: #888; margin-top: 50px;">歡迎來到企業戰情室。<br><br>系統大腦已準備就緒，您可以隨時請我分析「客服情報」或提供高商業價值的決策建議。</div>';
+        return;
+    }
+    history.forEach(msg => {
+        const timeData = processMessageContent(msg.text);
+        if (timeData.date !== lastWarRoomDate) {
+            const dateDiv = document.createElement('div');
+            dateDiv.className = 'date-divider';
+            dateDiv.innerHTML = `<span>${timeData.date}</span>`;
+            msgContainer.appendChild(dateDiv);
+            lastWarRoomDate = timeData.date;
+        }
+        const wrapper = document.createElement('div');
+        const isAdvisor = (msg.sender === 'advisor');
+        wrapper.className = 'msg-wrapper ' + (isAdvisor ? 'left' : 'right');
 
-  function switchTab(tabId) {
+        const bubble = document.createElement('div');
+        bubble.classList.add('msg-bubble', isAdvisor ? 'msg-warroom' : 'msg-admin');
+        
+        if (isAdvisor) {
+            bubble.innerHTML = `<strong>${advisorIcon}戰情顧問：</strong><br>` + stripMarkdown(timeData.text);
+        } else {
+            bubble.innerHTML = stripMarkdown(timeData.text);
+        }
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'msg-time';
+        timeDiv.innerText = timeData.time;
+
+        wrapper.appendChild(bubble);
+        wrapper.appendChild(timeDiv);
+        msgContainer.appendChild(wrapper);
+    });
+    warRoomScrollToBottom();
+  })
+  .catch(err => console.error("戰情室歷史載入失敗", err));
+}
+
+function switchTab(tabId) {
     document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
     document.querySelectorAll('.tab-content').forEach(view => view.classList.remove('active-tab'));
    
